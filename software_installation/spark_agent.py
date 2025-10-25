@@ -150,8 +150,10 @@ class Perception:
                 for i in s[1:]:
                     jointv[i[0]] = i[1]
                 name = JOINT_SENSOR_NAMES[jointv['n']]
+                # joint angle
                 if 'ax' in jointv:
                     self.joint[name] = float(jointv['ax']) * DEG_TO_RAD * (-1 if name in INVERSED_JOINTS else 1)
+                # joint temperature
                 if 'tp' in jointv:
                     self.joint_temperature[name] = float(jointv['tp'])
             elif name == VISION_PERCEPTOR or name == TOP_CAMERA:
