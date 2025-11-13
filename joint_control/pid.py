@@ -35,7 +35,7 @@ class PIDController(object):
         self.e2 = np.zeros(size) # error from two steps ago?
         # ADJUST PARAMETERS BELOW
         delay = 0
-        self.Kp = 0 # proptional gain
+        self.Kp = 27 # proptional gain
         self.Ki = 0 # integral constant
         self.Kd = 0 # derivative constant
         self.y = deque(np.zeros(size), maxlen=delay + 1) # output buffer for controller, 'maxlen' determines how long previous outputs are stored
