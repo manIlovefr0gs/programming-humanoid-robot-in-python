@@ -30,15 +30,16 @@ class PIDController(object):
         @param delay: delay in number of steps
         '''
         self.dt = dt
-        self.u = np.zeros(size)
-        self.e1 = np.zeros(size)
-        self.e2 = np.zeros(size)
+        self.u = np.zeros(size) # control signal
+        self.e1 = np.zeros(size) # error from previous step?
+        self.e2 = np.zeros(size) # error from two steps ago?
         # ADJUST PARAMETERS BELOW
         delay = 0
-        self.Kp = 0
-        self.Ki = 0
-        self.Kd = 0
-        self.y = deque(np.zeros(size), maxlen=delay + 1)
+        self.Kp = 27 # proptional gain
+        self.Ki = 0 # integral constant
+        self.Kd = 0 # derivative constant
+        self.y = deque(np.zeros(size), maxlen=delay + 1) # output buffer for controller, 'maxlen' determines how long previous outputs are stored
+        self.integral  = np.zeros(size) 
 
     def set_delay(self, delay):
         '''
@@ -52,7 +53,14 @@ class PIDController(object):
         @param sensor: current values from sensor
         @return control signal
         '''
-        # YOUR CODE HERE
+        error = target - sensor #e(t)
+        proportional = self.Kp * error
+        derivative = self.Kd * ( (error - self.e1) / self.dt)
+        self.integral += error * self.dt
+        integral = self.Ki * self.integral
+
+        self.u = proportional + integral + derivative
+        self.e1 = error
 
         return self.u
 

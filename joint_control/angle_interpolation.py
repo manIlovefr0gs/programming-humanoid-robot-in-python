@@ -21,8 +21,10 @@
 
 
 from pid import PIDAgent
-from keyframes import hello
-
+from keyframes import *
+from scipy.interpolate import CubicSpline
+import numpy as np
+import matplotlib.pyplot as plt
 
 class AngleInterpolationAgent(PIDAgent):
     def __init__(self, simspark_ip='localhost',
@@ -35,15 +37,59 @@ class AngleInterpolationAgent(PIDAgent):
 
     def think(self, perception):
         target_joints = self.angle_interpolation(self.keyframes, perception)
-        target_joints['RHipYawPitch'] = target_joints['LHipYawPitch'] # copy missing joint in keyframes
+        #target_joints['RHipYawPitch'] = target_joints['LHipYawPitch'] # copy missing joint in keyframes
         self.target_joints.update(target_joints)
         return super(AngleInterpolationAgent, self).think(perception)
 
     def angle_interpolation(self, keyframes, perception):
         target_joints = {}
-        # YOUR CODE HERE
+        
+        current_time = perception.time
+        
+
+        for index, name in enumerate(keyframes[0]):
+            times = keyframes[1][index]
+            angles = []
+
+            for key in keyframes[2][index]:
+                angle = key[0]
+                
+                angles.append(angle)
+
+            cs = CubicSpline(times,angles, bc_type='natural')
+
+            if current_time <= times[0]:
+                target_joints[name] = angles[0]
+            elif current_time >= times[-1]:
+                target_joints[name] = angles[-1]
+            else:
+                target_joints[name] = float(cs(current_time))
 
         return target_joints
+
+'''
+def plot_keyframe(joint_name,keyframes):
+    names, times_list, keys_list = keyframes
+
+    if joint_name not in names:
+        raise ValueError(f"Gelenk '{joint_name}' nicht in {names}")
+
+    idx = names.index(joint_name)
+    t = np.array(times_list[idx])
+    angles = np.array([k[0] for k in keys_list[idx]])
+
+    plt.figure(figsize=(7, 4))
+    plt.plot(t, angles, 'o-', label='Linear Interpolation (Keyframes)', markersize=8)
+    plt.title(f"Raw Data – {joint_name}")
+    plt.xlabel("Time [t]")
+    plt.ylabel("Angle [rad]")
+    plt.grid(True)
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
+'''
+
+
 
 if __name__ == '__main__':
     agent = AngleInterpolationAgent()
