@@ -19,12 +19,11 @@
 # add PYTHONPATH
 import os
 import sys
+import json
+from numpy.matlib import *
+
 sys.path.append(os.path.join(os.path.abspath(os.path.dirname(__file__)), '..', 'joint_control'))
-
-from numpy.matlib import matrix, identity
-
 from recognize_posture import PostureRecognitionAgent
-
 
 class ForwardKinematicsAgent(PostureRecognitionAgent):
     def __init__(self, simspark_ip='localhost',
@@ -35,10 +34,45 @@ class ForwardKinematicsAgent(PostureRecognitionAgent):
         super(ForwardKinematicsAgent, self).__init__(simspark_ip, simspark_port, teamname, player_id, sync_mode)
         self.transforms = {n: identity(4) for n in self.joint_names}
 
-        # chains defines the name of chain and joints of the chain
-        self.chains = {'Head': ['HeadYaw', 'HeadPitch']
-                       # YOUR CODE HERE
+        # chains defines the name of chain and joints of the chain / topologie
+        self.chains = { "Head": ["HeadYaw", "HeadPitch"],
+                        "LeftArm": ["LShoulderPitch", "LShoulderRoll", "LElbowYaw", "LElbowRoll", "LWristYaw"],
+                        "RightArm": ["RShoulderPitch", "RShoulderRoll", "RElbowYaw", "RElbowRoll", "RWristYaw"],
+                        "LeftLeg": ["LHipYawPitch", "LHipRoll", "LHipPitch", "LKneePitch", "LAnklePitch", "LAnkleRoll"],
+                        "RightLeg": ["RHipYawPitch", "RHipRoll", "RHipPitch", "RKneePitch", "RAnklePitch", "RAnkleRoll"]
                        }
+        # geometrie in meters
+        self.translation = {
+            #head
+            "HeadYaw": [0, 0, 0.1265],
+            "HeadPitch": [0, 0, 0],
+            #left arm
+            "LShoulderPitch": [0, 0.098, 0.100],
+            "LShoulderRoll": [0, 0, 0],
+            "LElbowYaw": [0.105, 0.015,0],
+            "LElbowRoll": [0,0,0],
+            "LWristYaw": [0.05595,0,0],
+            #right arm
+            "RShoulderPitch": [0.0, -0.098, 0.100],
+            "RShoulderRoll": [0.0, 0.0, 0.0],
+            "RElbowYaw": [0.105, -0.015, 0.0], 
+            "RElbowRoll": [0.0, 0.0, 0.0],
+            "RWristYaw": [0.05595, 0.0, 0.0],
+            #left leg
+            "LHipYawPitch": [0,0.05,-0.085],
+            "LHipRoll":[0,0,0],
+            "LHipPitch":[0,0,0],
+            "LKneePitch":[0,0,-0.1],
+            "LAnklePitch":[0,0,-0.1029],
+            "LAnkleRoll":[0,0,0],
+            #right leg
+            "RHipYawPitch": [0,-0.05,-0.085],
+            "RHipRoll":[0,0,0],
+            "RHipPitch":[0,0,0],
+            "RKneePitch":[0,0,-0.1],
+            "RAnklePitch":[0,0,-0.1029],
+            "RAnkleRoll":[0,0,0]
+             }
 
     def think(self, perception):
         self.forward_kinematics(perception.joint)
@@ -52,8 +86,51 @@ class ForwardKinematicsAgent(PostureRecognitionAgent):
         :return: transformation
         :rtype: 4x4 matrix
         '''
+
+        # identity matrix 
         T = identity(4)
-        # YOUR CODE HERE
+
+        joint_cos = cos(joint_angle)
+        joint_sin = sin(joint_angle)
+
+        rotations = [
+            # x axis
+            array([[1, 0, 0, 0],
+                    [0, joint_cos, -joint_sin, 0],
+                    [0, joint_sin,  joint_cos, 0],
+                    [0, 0, 0, 1]]),
+            # y axis
+            array([[joint_cos, 0, joint_sin, 0],
+                    [0, 1, 0, 0],
+                    [-joint_sin, 0, joint_cos, 0],
+                    [0, 0, 0, 1]]),  
+            # z axis (standard right-handed rotation by +angle)
+            array([[joint_cos, -joint_sin, 0, 0],
+                   [joint_sin,  joint_cos, 0, 0],
+                   [0, 0, 1, 0],
+                   [0, 0, 0, 1]])
+        ]
+
+        # map joint name suffix to rotation index
+        suffix_map = {'Pitch': 1,  # rotation around y
+                      'Roll':  0,  # rotation around x
+                      'Yaw':   2}  # rotation around z
+
+        rot_index = None
+        for suf, idx in suffix_map.items():
+            if joint_name.endswith(suf):
+                rot_index = idx
+                break
+
+        if rot_index is None:
+            print("Joint name error: " + joint_name + "\nDoes not end with Pitch, Roll, or Yaw" )
+            return identity(4)
+
+        T = rotations[rot_index]
+
+        T[0][3] = self.translation[joint_name][0]
+        T[1][3] = self.translation[joint_name][1]
+        T[2][3] = self.translation[joint_name][2]
 
         return T
 
@@ -65,9 +142,11 @@ class ForwardKinematicsAgent(PostureRecognitionAgent):
         for chain_joints in self.chains.values():
             T = identity(4)
             for joint in chain_joints:
-                angle = joints[joint]
+                angle = joints.get(joint, 0.0)
                 Tl = self.local_trans(joint, angle)
-                # YOUR CODE HERE
+
+
+                T = T @ Tl
 
                 self.transforms[joint] = T
 
