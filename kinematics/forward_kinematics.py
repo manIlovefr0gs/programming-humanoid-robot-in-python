@@ -104,29 +104,23 @@ class ForwardKinematicsAgent(PostureRecognitionAgent):
                     [0, 1, 0, 0],
                     [-joint_sin, 0, joint_cos, 0],
                     [0, 0, 0, 1]]),  
-            # z axis (standard right-handed rotation by +angle)
-            array([[joint_cos, -joint_sin, 0, 0],
-                   [joint_sin,  joint_cos, 0, 0],
-                   [0, 0, 1, 0],
-                   [0, 0, 0, 1]])
+            # z axis
+            array([[joint_cos, joint_sin, 0, 0],
+                    [-joint_sin, joint_cos, 0, 0],
+                    [0, 0, 1, 0],
+                    [0, 0, 0, 1]])
         ]
 
-        # map joint name suffix to rotation index
-        suffix_map = {'Pitch': 1,  # rotation around y
-                      'Roll':  0,  # rotation around x
-                      'Yaw':   2}  # rotation around z
 
-        rot_index = None
-        for suf, idx in suffix_map.items():
-            if joint_name.endswith(suf):
-                rot_index = idx
-                break
-
-        if rot_index is None:
+        if joint_name.endswith("Pitch"):
+            T = rotations[1] # rotation around y axis
+        elif joint_name.endswith("Roll"):
+            T = rotations[0] # rotation around x axis
+        elif joint_name.endswith("Yaw"):
+            T = rotations[2] # rotation around z axis
+        else:
             print("Joint name error: " + joint_name + "\nDoes not end with Pitch, Roll, or Yaw" )
             return identity(4)
-
-        T = rotations[rot_index]
 
         T[0][3] = self.translation[joint_name][0]
         T[1][3] = self.translation[joint_name][1]
@@ -143,10 +137,9 @@ class ForwardKinematicsAgent(PostureRecognitionAgent):
             T = identity(4)
             for joint in chain_joints:
                 angle = joints.get(joint, 0.0)
-                Tl = self.local_trans(joint, angle)
+                Tl = self.local_trans(joint, angle) # local transformation
 
-
-                T = T @ Tl
+                T = T @ Tl # multply transformation by fk
 
                 self.transforms[joint] = T
 
