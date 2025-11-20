@@ -36,10 +36,10 @@ class ForwardKinematicsAgent(PostureRecognitionAgent):
 
         # chains defines the name of chain and joints of the chain / topologie
         self.chains = { "Head": ["HeadYaw", "HeadPitch"],
-                        "LeftArm": ["LShoulderPitch", "LShoulderRoll", "LElbowYaw", "LElbowRoll", "LWristYaw"],
-                        "RightArm": ["RShoulderPitch", "RShoulderRoll", "RElbowYaw", "RElbowRoll", "RWristYaw"],
-                        "LeftLeg": ["LHipYawPitch", "LHipRoll", "LHipPitch", "LKneePitch", "LAnklePitch", "LAnkleRoll"],
-                        "RightLeg": ["RHipYawPitch", "RHipRoll", "RHipPitch", "RKneePitch", "RAnklePitch", "RAnkleRoll"]
+                        "LArm": ["LShoulderPitch", "LShoulderRoll", "LElbowYaw", "LElbowRoll", "LWristYaw"],
+                        "RArm": ["RShoulderPitch", "RShoulderRoll", "RElbowYaw", "RElbowRoll", "RWristYaw"],
+                        "LLeg": ["LHipYawPitch", "LHipRoll", "LHipPitch", "LKneePitch", "LAnklePitch", "LAnkleRoll"],
+                        "RLeg": ["RHipYawPitch", "RHipRoll", "RHipPitch", "RKneePitch", "RAnklePitch", "RAnkleRoll"]
                        }
         # geometrie in meters
         self.translation = {
@@ -105,8 +105,8 @@ class ForwardKinematicsAgent(PostureRecognitionAgent):
                     [-joint_sin, 0, joint_cos, 0],
                     [0, 0, 0, 1]]),  
             # z axis
-            array([[joint_cos, joint_sin, 0, 0],
-                    [-joint_sin, joint_cos, 0, 0],
+            array([[joint_cos, -joint_sin, 0, 0],
+                    [joint_sin, joint_cos, 0, 0],
                     [0, 0, 1, 0],
                     [0, 0, 0, 1]])
         ]
