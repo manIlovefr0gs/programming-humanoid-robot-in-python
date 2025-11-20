@@ -5,14 +5,14 @@
        The documentation from Aldebaran is here:
        http://doc.aldebaran.com/2-1/family/robots/bodyparts.html#effector-chain
     2. implement the calculation of local transformation for one joint in function
-       ForwardKinematicsAgent.local_trans. The necessary documentation are:
+       ForwardKinematicsAgent.local_translation. The necessary documentation are:
        http://doc.aldebaran.com/2-1/family/nao_h21/joints_h21.html
        http://doc.aldebaran.com/2-1/family/nao_h21/links_h21.html
     3. complete function ForwardKinematicsAgent.forward_kinematics, save the transforms of all body parts in torso
        coordinate into self.transforms of class ForwardKinematicsAgent
 
 * Hints:
-    1. the local_trans has to consider different joint axes and link parameters for different joints
+    1. the local_translation has to consider different joint axes and link parameters for different joints
     2. Please use radians and meters as unit.
 '''
 
@@ -78,7 +78,7 @@ class ForwardKinematicsAgent(PostureRecognitionAgent):
         self.forward_kinematics(perception.joint)
         return super(ForwardKinematicsAgent, self).think(perception)
 
-    def local_trans(self, joint_name, joint_angle):
+    def local_translation(self, joint_name, joint_angle):
         '''calculate local transformation of one joint
 
         :param str joint_name: the name of joint
@@ -86,6 +86,7 @@ class ForwardKinematicsAgent(PostureRecognitionAgent):
         :return: transformation
         :rtype: 4x4 matrix
         '''
+
 
         # identity matrix 
         T = identity(4)
@@ -137,7 +138,7 @@ class ForwardKinematicsAgent(PostureRecognitionAgent):
             T = identity(4)
             for joint in chain_joints:
                 angle = joints.get(joint, 0.0)
-                Tl = self.local_trans(joint, angle) # local transformation
+                Tl = self.local_translation(joint, angle) # local transformation
 
                 T = T @ Tl # multply transformation by fk
 
@@ -145,4 +146,50 @@ class ForwardKinematicsAgent(PostureRecognitionAgent):
 
 if __name__ == '__main__':
     agent = ForwardKinematicsAgent()
-    agent.run()
+    # test angles
+    test_joints = {
+        "HeadYaw": 0.5,
+        "HeadPitch": 0.3,
+        "LShoulderPitch": 1.0,
+        "LShoulderRoll": 0.2,
+        "LElbowYaw": 0.5,
+        "LElbowRoll": -1.0,
+        "LWristYaw": 0.0,
+        "RShoulderPitch": 1.0,
+        "RShoulderRoll": -0.2,
+        "RElbowYaw": 0.5,
+        "RElbowRoll": 1.0,
+        "RWristYaw": 0.0,
+        "LHipYawPitch": 0.0,
+        "LHipRoll": 0.0,
+        "LHipPitch": -0.5,
+        "LKneePitch": 1.0,
+        "LAnklePitch": -0.5,
+        "LAnkleRoll": 0.0,
+        "RHipYawPitch": 0.0,
+        "RHipRoll": 0.0,
+        "RHipPitch": -0.5,
+        "RKneePitch": 1.0,
+        "RAnklePitch": -0.5,
+        "RAnkleRoll": 0.0
+    }
+    
+    # calc Forward Kinematics 
+    agent.forward_kinematics(test_joints)
+    
+    print("Forward Kinematics Test Results:")
+    print("=" * 50)
+    
+    for chain_name, chain_joints in agent.chains.items():
+        print(f"\n{chain_name} Chain:")
+        for joint in chain_joints:
+            T = agent.transforms[joint]
+            position = T[0:3, 3]  # Extract position as a 1D array
+            print(f"  {joint:20s}: Position = [{position[0]:7.4f}, {position[1]:7.4f}, {position[2]:7.4f}]")
+    
+    
+    print(f"\nLWristYaw position: {agent.transforms['LWristYaw'][0:3, 3].A1}")
+    print(f"RWristYaw position: {agent.transforms['RWristYaw'][0:3, 3].A1}")
+    print(f"LAnkleRoll position: {agent.transforms['LAnkleRoll'][0:3, 3].A1}")
+    print(f"RAnkleRoll position: {agent.transforms['RAnkleRoll'][0:3, 3].A1}")
+    #agent.run()
