@@ -18,43 +18,39 @@ from numpy.matlib import identity
 class InverseKinematicsAgent(ForwardKinematicsAgent):
 
     def compute_jacobian(self, chain_joints, current_angles):
-            '''Compute the Jacobian matrix for the given chain
+        '''compute the Jacobian matrix for a given chain and current joint angles
+        '''
+        n_joints = len(chain_joints)
+        jacobian = zeros((6, n_joints))
+        
+        # Get end effector position with current angles
+        self.forward_kinematics(current_angles)
+        end_joint = chain_joints[-1]
+        T_end = self.transforms[end_joint]
+        p_end = T_end[:3, 3]  # End effector position
+        
+        # Compute Jacobian 
+        delta = 1e-6
+        
+        for i, joint in enumerate(chain_joints):
+            # disturbing the angles a bit, bcause apperentlyy numerical m is not as precise as analytical m 
+            perturbed_angles = current_angles.copy()
+            current_angle = float(current_angles.get(joint, 0.0))
+            perturbed_angles[joint] = current_angle + delta
             
-            :param list chain_joints: list of joint names in the chain
-            :param dict current_angles: current joint angles
-            :return: Jacobian matrix (6 x n_joints)
-            '''
-            n_joints = len(chain_joints)
-            jacobian = zeros((6, n_joints))
+            # Compute forward kinematics with perturbed angle
+            self.forward_kinematics(perturbed_angles)
+            T_perturbed = self.transforms[end_joint]
+            p_perturbed = T_perturbed[:3, 3]
             
-            # Get end effector position with current angles
-            self.forward_kinematics(current_angles)
-            end_joint = chain_joints[-1]
-            T_end = self.transforms[end_joint]
-            p_end = T_end[:3, 3]  # End effector position
+            # Linear velocity (position derivative)
+            dp = (p_perturbed - p_end) / delta
+            jacobian[:3, i] = dp.flatten()
             
-            # Compute Jacobian 
-            delta = 1e-6
-            
-            for i, joint in enumerate(chain_joints):
-                # disturbing the angles a bit, bcause apperentlyy numerical m is not as precise as analytical m 
-                perturbed_angles = current_angles.copy()
-                current_angle = float(current_angles.get(joint, 0.0))
-                perturbed_angles[joint] = current_angle + delta
-                
-                # Compute forward kinematics with perturbed angle
-                self.forward_kinematics(perturbed_angles)
-                T_perturbed = self.transforms[end_joint]
-                p_perturbed = T_perturbed[:3, 3]
-                
-                # Linear velocity (position derivative)
-                dp = (p_perturbed - p_end) / delta
-                jacobian[:3, i] = dp.flatten()
-                
-                # Angular velocity
-                jacobian[3:, i] = 0
-            
-            return jacobian
+            # Angular velocity
+            jacobian[3:, i] = 0
+        
+        return jacobian
 
 
 
