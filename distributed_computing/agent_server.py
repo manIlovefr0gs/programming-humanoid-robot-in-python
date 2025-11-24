@@ -66,7 +66,8 @@ class ServerAgent(InverseKinematicsAgent, robot_pb2_grpc.AgentServiceServicer):
 
     def get_posture(self, request, context):
         '''return current posture of robot'''
-        return empty_pb2.Empty()
+        result = self.recognize_posture(self.perception)
+        return robot_pb2.GetPostureResponse(posture=result)
 
     def execute_keyframes(self, request, context):
         '''excute keyframes, note this function is blocking call,

@@ -68,7 +68,9 @@ class ClientAgent(object):
 
     def get_posture(self):
         '''return current posture of robot'''
-        # YOUR CODE HERE
+        request = robot_pb2.GetPostureRequest()
+        response = self.stub.get_posture(request)
+        return response.posture
 
     def execute_keyframes(self, keyframes):
         '''excute keyframes, note this function is blocking call,
@@ -98,6 +100,7 @@ if __name__ == '__main__':
     print(f"New angle set to {angle}")
     time.sleep(3)
     print("Target angle:", client.get_angle("HeadYaw"))
+    print("Current posture:", client.get_posture())
 
 
 

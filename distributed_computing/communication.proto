@@ -5,12 +5,13 @@ import "google/protobuf/empty.proto";
 
 
 service AgentService {
-    rpc Hello(HelloRequest) returns (HelloResponse);
-    rpc GetAngle(AngleRequest) returns (AngleResponse);
-    rpc SetAngle(SetAngleRequest) returns (google.protobuf.Empty); //maybe hier ein empty hin
-    rpc ExecuteKeyframes(ExecuteKeyframesRequest) returns (google.protobuf.Empty);
-    rpc GetTransform(TransformRequest) returns (TransformResponse);
-    rpc SetTransform(SetTransformRequest) returns (SetTransformResponse);
+    rpc hello(HelloRequest) returns (HelloResponse);
+    rpc get_angle(AngleRequest) returns (AngleResponse);
+    rpc set_angle(SetAngleRequest) returns (google.protobuf.Empty); //maybe hier ein empty hin
+    rpc get_posture(GetPostureRequest) returns (GetPostureResponse);
+    rpc execute_keyframes(ExecuteKeyframesRequest) returns (google.protobuf.Empty);
+    rpc get_transform(TransformRequest) returns (TransformResponse);
+    rpc set_transform(SetTransformRequest) returns (SetTransformResponse);
 }
 
 message HelloRequest{
@@ -32,6 +33,12 @@ message AngleResponse{
 message SetAngleRequest{
     string joint_name = 1;
     double angle = 2;
+}
+
+message GetPostureRequest{}
+
+message GetPostureResponse{
+    string posture = 1;
 }
 
 message ExecuteKeyframesRequest{
