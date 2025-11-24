@@ -1,16 +1,24 @@
 syntax = "proto3";
 
-package robot_communication;
 
 import "google/protobuf/empty.proto";
 
 
 service AgentService {
+    rpc Hello(HelloRequest) returns (HelloResponse);
     rpc GetAngle(AngleRequest) returns (AngleResponse);
     rpc SetAngle(SetAngleRequest) returns (google.protobuf.Empty); //maybe hier ein empty hin
     rpc ExecuteKeyframes(ExecuteKeyframesRequest) returns (google.protobuf.Empty);
     rpc GetTransform(TransformRequest) returns (TransformResponse);
     rpc SetTransform(SetTransformRequest) returns (SetTransformResponse);
+}
+
+message HelloRequest{
+    string name = 1;
+}
+
+message HelloResponse{
+    string hello_answer = 1;
 }
 
 message AngleRequest{

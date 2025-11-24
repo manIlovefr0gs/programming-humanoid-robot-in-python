@@ -7,6 +7,9 @@
 '''
 
 import weakref
+import grpc
+import communication_pb2 as robot_pb2
+import communication_pb2_grpc as robot_pb2_grpc
 
 class PostHandler(object):
     '''the post hander wraps function to be excuted in paralle
@@ -26,10 +29,25 @@ class PostHandler(object):
 class ClientAgent(object):
     '''ClientAgent request RPC service from remote server
     '''
-    # YOUR CODE HERE
     def __init__(self):
         self.post = PostHandler(self)
+        self.address = "localhost:50051"
+        self.channel = None
+        self.stub = None
     
+    def connect(self):
+        """connects to server"""
+        self.channel = grpc.insecure_channel(self.address)
+        self.stub = robot_pb2_grpc.AgentServiceStub(self.channel)
+
+    
+    def hello(self, name):
+        """check if connection is established"""
+        request = robot_pb2.HelloRequest(name=name)
+        response = self.stub.Hello(request)
+        return response.hello_answer
+
+
     def get_angle(self, joint_name):
         '''get sensor value of given joint'''
         # YOUR CODE HERE
@@ -59,8 +77,11 @@ class ClientAgent(object):
         '''
         # YOUR CODE HERE
 
+
 if __name__ == '__main__':
-    agent = ClientAgent()
-    # TEST CODE HERE
+    #agent = ClientAgent()
+    client = ClientAgent()
+    client.connect()
+    print(client.hello("World"))
 
 
