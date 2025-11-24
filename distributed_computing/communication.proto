@@ -1,0 +1,58 @@
+syntax = "proto3";
+
+package robot_communication;
+
+import "google/protobuf/empty.proto";
+
+
+service AgentService {
+    rpc GetAngle(AngleRequest) returns (AngleResponse);
+    rpc SetAngle(SetAngleRequest) returns (google.protobuf.Empty); //maybe hier ein empty hin
+    rpc ExecuteKeyframes(ExecuteKeyframesRequest) returns (google.protobuf.Empty);
+    rpc GetTransform(TransformRequest) returns (TransformResponse);
+    rpc SetTransform(SetTransformRequest) returns (SetTransformResponse);
+}
+
+message AngleRequest{
+    string joint_name = 1;
+}
+
+message AngleResponse{
+    double angle = 1;
+}
+
+message SetAngleRequest{
+    string joint_name = 1;
+    double angle = 2;
+}
+
+message ExecuteKeyframesRequest{
+    string keyframes_json = 1;
+    //string keyframes = 1; <- falls json in der Umsetzung nervt
+}
+
+message TransformRequest{
+    string name = 1;
+}
+
+message Transform{
+    repeated double data = 1;
+    int32 rows = 2;
+    int32 cols = 3;
+}
+ 
+message TransformResponse{
+    string name = 1;
+}
+
+message SetTransformRequest{
+    string effector_name = 1;
+    Transform transform = 2;
+}
+
+
+message SetTransformResponse{
+    repeated string joint_names = 1;
+    repeated double joint_angles = 2;
+    string info = 3;
+}
