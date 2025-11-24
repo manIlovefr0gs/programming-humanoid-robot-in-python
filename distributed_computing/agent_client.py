@@ -10,6 +10,7 @@ import weakref
 import grpc
 import communication_pb2 as robot_pb2
 import communication_pb2_grpc as robot_pb2_grpc
+import time
 
 class PostHandler(object):
     '''the post hander wraps function to be excuted in paralle
@@ -44,18 +45,26 @@ class ClientAgent(object):
     def hello(self, name):
         """check if connection is established"""
         request = robot_pb2.HelloRequest(name=name)
-        response = self.stub.Hello(request)
+        response = self.stub.hello(request)
         return response.hello_answer
 
 
     def get_angle(self, joint_name):
         '''get sensor value of given joint'''
-        # YOUR CODE HERE
-    
+        request = robot_pb2.AngleRequest(joint_name=joint_name)
+        response = self.stub.get_angle(request)
+        return response.angle
+
+
     def set_angle(self, joint_name, angle):
         '''set target angle of joint for PID controller
         '''
-        # YOUR CODE HERE
+        request = robot_pb2.SetAngleRequest(
+        joint_name=joint_name,
+        angle=angle
+    )
+        self.stub.set_angle(request)
+
 
     def get_posture(self):
         '''return current posture of robot'''
@@ -83,5 +92,12 @@ if __name__ == '__main__':
     client = ClientAgent()
     client.connect()
     print(client.hello("World"))
+    print("Angle of HeadYaw:", client.get_angle("HeadYaw"))
+    angle = 1
+    client.set_angle("HeadYaw", angle)
+    print(f"New angle set to {angle}")
+    time.sleep(3)
+    print("Target angle:", client.get_angle("HeadYaw"))
+
 
 

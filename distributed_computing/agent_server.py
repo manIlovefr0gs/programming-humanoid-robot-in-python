@@ -21,13 +21,17 @@ sys.path.append(os.path.join(os.path.abspath(os.path.dirname(__file__)), '..', '
 
 from inverse_kinematics import InverseKinematicsAgent
 from concurrent import futures
+from google.protobuf import empty_pb2
 
 def serve():
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
 
+    agent = ServerAgent()
+    agent.start()
+
     robot_pb2_grpc.add_AgentServiceServicer_to_server(
-        ServerAgent(),  
-        server
+    agent, 
+    server
     )
 
     server.add_insecure_port("[::]:50051")   
@@ -41,45 +45,53 @@ class ServerAgent(InverseKinematicsAgent, robot_pb2_grpc.AgentServiceServicer):
     
    
     
-    def get_angle(self, joint_name):
+    def get_angle(self, request, context):
         '''get sensor value of given joint'''
+        joint_name = request.joint_name
+        angle = self.perception.joint.get(joint_name)
 
-        return robot_pb2.AngleResponse(angle=42.0)     
+        return robot_pb2.AngleResponse(angle=angle)
 
-    def set_angle(self, joint_name, angle):
+    def set_angle(self, request, context):
         '''set target angle of joint for PID controller
         '''
-        return empty_pb2.Empty()
-        
+        joint_name = request.joint_name
+        angle = request.angle
+        #print(f"Setting {joint_name} to {angle}")
+        #print(f"All joint before: {self.target_joints}")
 
-    def get_posture(self):
+        self.target_joints[joint_name] = angle
+        #print(f"All target joints: {self.target_joints}")
+        return empty_pb2.Empty()
+
+    def get_posture(self, request, context):
         '''return current posture of robot'''
         return empty_pb2.Empty()
 
-    def execute_keyframes(self, keyframes):
+    def execute_keyframes(self, request, context):
         '''excute keyframes, note this function is blocking call,
         e.g. return until keyframes are executed
         '''
         return empty_pb2.Empty()
 
-    def get_transform(self, name):
+    def get_transform(self, request, context):
         '''get transform with given name
         '''
         return robot_pb2.TransformResponse(name=request.name)
 
-    def set_transform(self, effector_name, transform):
+    def set_transform(self, request, context):
         '''solve the inverse kinematics and control joints use the results
         '''
         return robot_pb2.SetTransformResponse()
 
-    def Hello(self, request, context):
+    def hello(self, request, context):
         return robot_pb2.HelloResponse(hello_answer=f"Hello {request.name}")
 
 
 if __name__ == '__main__':
-    #agent = ServerAgent()
+   
     serve()
     print("Starting server...")
-    #agent.run()
+    
     
 
