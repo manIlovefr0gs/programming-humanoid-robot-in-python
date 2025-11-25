@@ -15,6 +15,7 @@
 import os
 import sys
 import grpc
+import numpy as np
 import communication_pb2 as robot_pb2
 import communication_pb2_grpc as robot_pb2_grpc
 sys.path.append(os.path.join(os.path.abspath(os.path.dirname(__file__)), '..', 'kinematics'))
@@ -22,6 +23,7 @@ sys.path.append(os.path.join(os.path.abspath(os.path.dirname(__file__)), '..', '
 from inverse_kinematics import InverseKinematicsAgent
 from concurrent import futures
 from google.protobuf import empty_pb2
+
 
 def serve():
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
@@ -78,12 +80,84 @@ class ServerAgent(InverseKinematicsAgent, robot_pb2_grpc.AgentServiceServicer):
     def get_transform(self, request, context):
         '''get transform with given name
         '''
-        return robot_pb2.TransformResponse(name=request.name)
+        name = request.name
+        T = self.transforms.get(name)
+        
+        if T is None:
+            print(f"ERROR: Transform '{name}' not found")
+            context.set_code(grpc.StatusCode.NOT_FOUND)
+            context.set_details(f"Transform '{name}' not found")
+            return robot_pb2.TransformResponse()
+                
+        flat_data = np.array(T).flatten()
+        data_list = [float(x) for x in flat_data]
+        
+
+        transform = robot_pb2.Transform()
+        #print("Empty Transform created")
+        
+        transform.rows = int(T.shape[0])
+        #print(f"rows set to {transform.rows}")
+        
+        transform.cols = int(T.shape[1])
+        #print(f"cols set to {transform.cols}")
+        
+        #print("Set data...")
+        transform.data.extend(data_list)  
+        #print("data set successfully")
+           
+
+        response = robot_pb2.TransformResponse(
+            name=name,
+            transform=transform
+        )
+
+        #print(f"Transform: , {response}")
+
+        return response
+
+    
+        
+    
 
     def set_transform(self, request, context):
         '''solve the inverse kinematics and control joints use the results
         '''
-        return robot_pb2.SetTransformResponse()
+        effector_name = request.effector_name
+        transform = request.transform
+        
+        print(f"=== DEBUG set_transform ===")
+        print(f"Effector name: {effector_name}")
+        
+        transform_data = np.array(transform.data)
+        T = transform_data.reshape(transform.rows, transform.cols)
+        
+        print(f"Target transform shape: {T.shape}")
+        print(f"Target transform:\n{T}")
+        
+        joint_angles = self.inverse_kinematics(effector_name, T)
+        
+        print(f"Calculated joint_angles: {joint_angles}")
+        
+        chain_joints = self.chains.get(effector_name, [])
+        print(f"Chain joints for {effector_name}: {chain_joints}")
+
+        angles = [float(a) for a in joint_angles]
+
+        for joint_name, angle in zip(chain_joints, angles):
+            self.target_joints[joint_name] = angle
+            print(f"  Set {joint_name} = {angle}")
+        
+        print(f"Updated target_joints: {self.target_joints}")
+        
+        response = robot_pb2.SetTransformResponse(
+            joint_names=chain_joints,
+            joint_angles=angles
+        )
+        return response
+
+
+
 
     def hello(self, request, context):
         return robot_pb2.HelloResponse(hello_answer=f"Hello {request.name}")

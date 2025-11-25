@@ -42,8 +42,9 @@ message GetPostureResponse{
 }
 
 message ExecuteKeyframesRequest{
-    string keyframes_json = 1;
-    //string keyframes = 1; <- falls json in der Umsetzung nervt
+    string keyframes = 1; //<- falls json in der Umsetzung nervt
+    //string keyframes_json = 1;
+    
 }
 
 message TransformRequest{
@@ -58,6 +59,8 @@ message Transform{
  
 message TransformResponse{
     string name = 1;
+    Transform transform = 2;
+
 }
 
 message SetTransformRequest{
@@ -69,5 +72,5 @@ message SetTransformRequest{
 message SetTransformResponse{
     repeated string joint_names = 1;
     repeated double joint_angles = 2;
-    string info = 3;
+
 }

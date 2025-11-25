@@ -11,6 +11,7 @@ import grpc
 import communication_pb2 as robot_pb2
 import communication_pb2_grpc as robot_pb2_grpc
 import time
+import numpy as np
 
 class PostHandler(object):
     '''the post hander wraps function to be excuted in paralle
@@ -76,17 +77,48 @@ class ClientAgent(object):
         '''excute keyframes, note this function is blocking call,
         e.g. return until keyframes are executed
         '''
-        # YOUR CODE HERE
+        request = robot_pb2.ExecuteKeyframesRequest()
+        self.stub.execute_keyframes(request)
 
     def get_transform(self, name):
         '''get transform with given name
         '''
-        # YOUR CODE HERE
+        request = robot_pb2.TransformRequest(name=name)
+        response = self.stub.get_transform(request)
+
+        transform_data = np.array(response.transform.data)
+        transform_matrix = transform_data.reshape(
+            response.transform.rows, 
+            response.transform.cols
+        )
+        return transform_matrix
 
     def set_transform(self, effector_name, transform):
         '''solve the inverse kinematics and control joints use the results
         '''
-        # YOUR CODE HERE
+        T = np.array(transform)
+    
+        # convert to flat list -> data_list for transform msg
+        flat_data = T.flatten()
+        data_list = [float(x) for x in flat_data]
+
+        # create Transform message
+        transform_msg = robot_pb2.Transform()
+        transform_msg.rows = int(T.shape[0])
+        transform_msg.cols = int(T.shape[1])
+        transform_msg.data.extend(data_list)
+
+        request = robot_pb2.SetTransformRequest(
+            effector_name=effector_name,
+            transform=transform_msg
+        )
+
+        response = self.stub.set_transform(request)
+
+        return {
+            'joint_names': list(response.joint_names),
+            'joint_angles': list(response.joint_angles)
+        }
 
 
 if __name__ == '__main__':
@@ -95,12 +127,32 @@ if __name__ == '__main__':
     client.connect()
     print(client.hello("World"))
     print("Angle of HeadYaw:", client.get_angle("HeadYaw"))
-    angle = 1
+    print("--------------------------------")
+    angle = -1
     client.set_angle("HeadYaw", angle)
     print(f"New angle set to {angle}")
     time.sleep(3)
     print("Target angle:", client.get_angle("HeadYaw"))
+    print("--------------------------------")
     print("Current posture:", client.get_posture())
+    print("--------------------------------")
+    joint = "HeadYaw"
+    transform = client.get_transform(joint)
+    print(f"Transform for {joint}:")
+    print(transform)
+    target_transform = np.array([
+        [1, 0, 0, 0.0],
+        [0, 1, 0, 0.05],  
+        [0, 0, 1, -0.3],   
+        [0, 0, 0, 1]
+        ])
+      
+    result = client.set_transform("LLeg", target_transform)
+    print("Set transform result:")
+    print(f"  Joints: {result['joint_names']}")
+    print(f"  Angles: {result['joint_angles']}")
+ 
+    
 
 
 
