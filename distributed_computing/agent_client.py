@@ -12,6 +12,12 @@ import communication_pb2 as robot_pb2
 import communication_pb2_grpc as robot_pb2_grpc
 import time
 import numpy as np
+import json
+import os
+import sys
+
+sys.path.append(os.path.join(os.path.abspath(os.path.dirname(__file__)), '..', 'joint_control'))
+from keyframes import *
 
 class PostHandler(object):
     '''the post hander wraps function to be excuted in paralle
@@ -77,8 +83,14 @@ class ClientAgent(object):
         '''excute keyframes, note this function is blocking call,
         e.g. return until keyframes are executed
         '''
-        request = robot_pb2.ExecuteKeyframesRequest()
+        # convert keyframes to json string
+        keyframes_json = json.dumps(keyframes)
+    
+        request = robot_pb2.ExecuteKeyframesRequest(keyframes=keyframes_json)
+        
         self.stub.execute_keyframes(request)
+
+
 
     def get_transform(self, name):
         '''get transform with given name
@@ -136,6 +148,12 @@ if __name__ == '__main__':
     print("--------------------------------")
     print("Current posture:", client.get_posture())
     print("--------------------------------")
+    keyframes = leftBellyToStand()
+    print("Executing keyframes:")
+    client.execute_keyframes(keyframes)
+    print("Keyframes executed.")
+
+    print("---------------------------------")
     joint = "HeadYaw"
     transform = client.get_transform(joint)
     print(f"Transform for {joint}:")
@@ -151,6 +169,7 @@ if __name__ == '__main__':
     print("Set transform result:")
     print(f"  Joints: {result['joint_names']}")
     print(f"  Angles: {result['joint_angles']}")
+
  
     
 

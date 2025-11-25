@@ -18,6 +18,7 @@ import grpc
 import numpy as np
 import communication_pb2 as robot_pb2
 import communication_pb2_grpc as robot_pb2_grpc
+import json
 sys.path.append(os.path.join(os.path.abspath(os.path.dirname(__file__)), '..', 'kinematics'))
 
 from inverse_kinematics import InverseKinematicsAgent
@@ -75,6 +76,16 @@ class ServerAgent(InverseKinematicsAgent, robot_pb2_grpc.AgentServiceServicer):
         '''excute keyframes, note this function is blocking call,
         e.g. return until keyframes are executed
         '''
+        keyframes_json = request.keyframes
+        keyframes = json.loads(keyframes_json)
+
+        print(f"Executing keyframes: {keyframes}")
+
+
+        self.keyframes = keyframes 
+
+
+
         return empty_pb2.Empty()
 
     def get_transform(self, request, context):
