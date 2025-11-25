@@ -13,6 +13,7 @@ from numpy import array, identity, linalg, matmul, zeros, transpose
 from numpy.linalg import pinv
 from forward_kinematics import ForwardKinematicsAgent
 from numpy.matlib import identity
+import numpy as np
 
 
 class InverseKinematicsAgent(ForwardKinematicsAgent):
@@ -77,7 +78,7 @@ class InverseKinematicsAgent(ForwardKinematicsAgent):
         current_angles = {joint: float(self.perception.joint.get(joint, 0.0)) 
                          for joint in self.joint_names}
         
-        target_position = transform[:3, 3]
+        target_position = np.array(transform[:3, 3]).flatten()
         
         # Jacobian invrese kinematics it
         for iteration in range(max_iterations):
@@ -87,7 +88,7 @@ class InverseKinematicsAgent(ForwardKinematicsAgent):
             # Get current end effector position
             end_joint = chain_joints[-1]
             current_transform = self.transforms[end_joint]
-            current_position = current_transform[:3, 3]
+            current_position = np.array(current_transform[:3, 3]).flatten()
             
             # calc pos error
             position_error = target_position - current_position
@@ -104,6 +105,7 @@ class InverseKinematicsAgent(ForwardKinematicsAgent):
             
             # matmul -> nice matrix multiplication
             delta_theta = matmul(J_damped_inv, position_error)
+            delta_theta = np.array(delta_theta).flatten()
             
             # Update joint angles with constraints
             for i, joint in enumerate(chain_joints):
