@@ -177,7 +177,7 @@ class ServerAgent(InverseKinematicsAgent, robot_pb2_grpc.AgentServiceServicer):
 if __name__ == '__main__':
    
     serve()
-    print("Starting server...")
+    
     
     
 

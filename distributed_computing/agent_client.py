@@ -15,10 +15,12 @@ import numpy as np
 import json
 import os
 import sys
+import threading
 
 sys.path.append(os.path.join(os.path.abspath(os.path.dirname(__file__)), '..', 'joint_control'))
 from keyframes import *
 
+//TODO: TEST CLIENT WITH DIFFERENT KEYFRAMES, FIXME: robot falls in some cases 
 class PostHandler(object):
     '''the post hander wraps function to be excuted in paralle
     '''
@@ -27,11 +29,21 @@ class PostHandler(object):
 
     def execute_keyframes(self, keyframes):
         '''non-blocking call of ClientAgent.execute_keyframes'''
-        # YOUR CODE HERE
+        thread = threading.Thread(
+            target=self.proxy.execute_keyframes,
+            args=(keyframes,)
+        )
+        thread.daemon = True 
+        thread.start()
 
     def set_transform(self, effector_name, transform):
         '''non-blocking call of ClientAgent.set_transform'''
-        # YOUR CODE HERE
+        thread = threading.Thread(
+            target=self.proxy.set_transform,
+            args=(effector_name, transform)
+        )
+        thread.daemon = True
+        thread.start()
 
 
 class ClientAgent(object):
@@ -169,7 +181,18 @@ if __name__ == '__main__':
     print("Set transform result:")
     print(f"  Joints: {result['joint_names']}")
     print(f"  Angles: {result['joint_angles']}")
-
+   
+    print("------------------Non Blocking Call - execute keyframes   ----------------------")
+    client.post.execute_keyframes(keyframes)
+    print("Requested execute_keyframe")
+    time.sleep(3)
+    
+    print("------------------Non Blocking Call - set transform   ----------------------")
+    start = time.time()
+    client.post.set_transform("RLeg", target_transform)
+    end = time.time()
+    print(f"Non-blocking call returned in {end-start:.2f}s")
+    
  
     
 
