@@ -35,9 +35,9 @@ class PIDController(object):
         self.e2 = np.zeros(size) # error from two steps ago?
         # ADJUST PARAMETERS BELOW
         delay = 0
-        self.Kp = 27 # proptional gain
-        self.Ki = 0 # integral constant
-        self.Kd = 0 # derivative constant
+        self.Kp = 17 # proptional gain
+        self.Ki = -0.2 # integral constant
+        self.Kd = 0.1 # derivative constant
         self.y = deque(np.zeros(size), maxlen=delay + 1) # output buffer for controller, 'maxlen' determines how long previous outputs are stored
         self.integral  = np.zeros(size) 
 
@@ -88,6 +88,12 @@ class PIDAgent(SparkAgent):
             perception.joint[joint_id]) for joint_id in JOINT_CMD_NAMES])
         u = self.joint_controller.control(target_angles, joint_angles)
         action.speed = dict(zip(JOINT_CMD_NAMES.keys(), u))  # dict: joint_id -> speed
+        '''
+        print(f"Think called - HeadYaw target: {self.target_joints.get('HeadYaw', 0)}, " 
+            f"current: {perception.joint.get('HeadYaw', 0)}")
+        print(f"Think called - HeadYaw target: {self.target_joints.get('HeadYaw')}, " 
+            f"current: {perception.joint.get('HeadYaw')}")
+'''
         return action
 
 
