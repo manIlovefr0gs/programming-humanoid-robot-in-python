@@ -32,3 +32,5 @@ This repo is work in progress, please [sync git](https://help.github.com/article
 The demo showed in lecture are included in this repo as well, please check files (mostly *.ipynb) in subfolders.
 
 # given ipynb file versions are no longer supported in VS -> cmd 'jupyter notebook'
+
+toni was here 2025
