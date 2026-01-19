@@ -6,8 +6,7 @@ import time
 import argparse
 from naoqi import ALProxy
 
-def main(IP, PORT):
-
+def track_event(IP, PORT, event_name, duration=None):
     print ("Connecting to", IP, "with port", PORT)
     motion = ALProxy("ALMotion", IP, PORT)
     posture = ALProxy("ALRobotPosture", IP, PORT)
@@ -21,9 +20,6 @@ def main(IP, PORT):
     # Go to posture stand
     posture.goToPosture("StandInit", fractionMaxSpeed)
 
-    # Set target to track.
-    eventName = "ALTracker/BlobDetected"
-
     # set mode
     mode = "Move"
     tracker.setMode(mode)
@@ -33,14 +29,19 @@ def main(IP, PORT):
     tracker.setRelativePosition([-0.5, 0.0, 0.0, 0.1, 0.1, 0.3])
 
     # Then, start tracker.
-    tracker.trackEvent(eventName)
+    tracker.trackEvent(event_name)
 
-    print ("ALTracker successfully started.")
+    print ("ALTracker successfully started for event:", event_name)
     print ("Use Ctrl+c to stop this script.")
 
     try:
-        while True:
-            time.sleep(1)
+        if duration is None:
+            while True:
+                time.sleep(1)
+        else:
+            end_time = time.time() + duration
+            while time.time() < end_time:
+                time.sleep(0.2)
     except KeyboardInterrupt:
         print()
         print ("Interrupted by user")
@@ -53,6 +54,12 @@ def main(IP, PORT):
     motion.rest()
 
     print ("ALTracker stopped.")
+
+def main(IP, PORT):
+
+    # Set target to track.
+    eventName = "ALTracker/ColorBlobDetected"
+    track_event(IP, PORT, eventName)
 
 
 if __name__ == "__main__" :

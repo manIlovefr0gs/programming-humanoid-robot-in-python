@@ -6,6 +6,7 @@ Python 2.7 kompatibel
 """
 
 from naoqi import ALProxy, ALBroker, ALModule
+import tracker_test
 import time
 import sys
 
@@ -124,7 +125,17 @@ def detect_color(robot_ip, robot_port, color_name):
                 # Event-Daten
                 if ColorDetector.blob_info:
                     print("Event-Daten:", ColorDetector.blob_info)
-                
+
+                # Tracker starten, während die Farberkennung aktiv bleibt
+                try:
+                    tracker_test.track_event(
+                        robot_ip,
+                        robot_port,
+                        "ALTracker/ColorBlobDetected"
+                    )
+                except Exception as e:
+                    print("Tracker-Fehler:", e)
+
                 # Extractor stoppen
                 color_detection.unsubscribe("ColorDetectionApp")
                 
