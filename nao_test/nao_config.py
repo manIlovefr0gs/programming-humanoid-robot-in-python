@@ -39,6 +39,7 @@ class InitNao:
 
 
 def main():
+    # nur zum testen
     nao = InitNao()
     motion = nao.get_motion_proxy()
     posture = nao.get_posture_proxy()
