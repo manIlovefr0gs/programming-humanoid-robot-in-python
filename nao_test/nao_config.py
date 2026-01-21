@@ -7,9 +7,9 @@ class InitNao:
     PORT = 9559
     
     COLORS = {
-        "rot":   (255, 0, 0, 60),
-        "gruen": (0, 255, 0, 60),
-        "blau":  (0, 0, 255, 60)
+        "red":   (255, 0, 0, 60),
+        "green": (0, 255, 0, 60),
+        "blue":  (0, 0, 255, 60)
     }
 
     def __init__(self):
@@ -23,17 +23,10 @@ class InitNao:
             self._proxies[proxy] = ALProxy(proxy, self.ip, self.port)
         return self._proxies[proxy]
 
-    def get_motion_proxy(self):
-        return self.get_proxy("ALMotion")
-
-    def get_posture_proxy(self):
-        return self.get_proxy("ALRobotPosture")
-
-    def get_tracker_proxy(self):
-        return self.get_proxy("ALTracker")
-
-    def get_memory_proxy(self):
-        return self.get_proxy("ALMemory")
+    def get_broker(self, name):
+        if "Broker" not in self._proxies:
+            self._proxies["Broker"] = ALProxy(name,"0.0.0.0",0, self.ip, self.port)
+        return self._proxies["Broker"]
 
 
 

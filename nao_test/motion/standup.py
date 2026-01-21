@@ -1,12 +1,11 @@
--*- coding: utf-8 -*-
 import sys
 import time
 from naoqi import ALProxy, ALBroker, ALModule
 from change_posture import *
-
+from nao_config import *
 
 FallResponder = None
-global memory = None   # is this legal in py? -> maybe einfach global memory in der Klasse 
+global memory  # Declare global variable without assignment
 
 class FallResponderModule(ALModule):
     def __init__(self, name):
@@ -21,9 +20,10 @@ class FallResponderModule(ALModule):
         memory.subscribeToEvent("robotHasFallen", self.getName(), "onFallen")
 
 
-    def on_fallen(self, key, value, message):
+    def on_fallen(self, key, value, message):  # Keep parameters for future use
         print("\nAua, ich bin hingefallen")
         print("Fall Event Details:", value)
+
         
         posture_family = self.posture.getPostureFamily()
         print("Posture Family:", posture_family)
@@ -40,10 +40,10 @@ def main():
     global FallResponder
     global memory
 
-    IP = "192.168.1.118"
-    PORT = 9559 
+    nao = InitNao()
+    broker = nao.get_broker("FallBroker")
 
-    broker = ALBroker("FallBroker", "0.0.0.0", 0, IP, PORT)
+    #broker = ALBroker("FallBroker", "0.0.0.0", 0, IP, PORT)
 
     FallResponder = FallResponderModule("FallResponder")
 
