@@ -139,14 +139,14 @@ def navigate_to_blob(broker_proxy, blob_detection, tracker_proxy, posture_proxy,
 
 if __name__ == "__main__":
     nao = InitNao()
-    '''broker = ALBroker(
-        "Broker",
-        "0.0.0.0",   # Listen auf allen Interfaces
-        0,           # Port automatisch wählen
+
+    broker = ALBroker(
+        "MoveToBlobBroker",
+        "0.0.0.0",   
+        0,          
         "192.168.1.118",
         9559
-    )'''
-    broker = nao.get_broker("MoveToBlobBroker")
+    )
     blob_detection = nao.get_proxy("ALColorBlobDetection")
     tracker_proxy = nao.get_proxy("ALTracker")
     posture_proxy = nao.get_proxy("ALRobotPosture")

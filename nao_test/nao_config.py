@@ -23,10 +23,6 @@ class InitNao:
             self._proxies[proxy] = ALProxy(proxy, self.ip, self.port)
         return self._proxies[proxy]
 
-    def get_broker(self, name):
-        if "Broker" not in self._proxies:
-            self._proxies["Broker"] = ALProxy(name,"0.0.0.0",0, self.ip, self.port)
-        return self._proxies["Broker"]
 
 
 
