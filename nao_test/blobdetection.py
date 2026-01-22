@@ -6,6 +6,7 @@ Python 2.7 kompatibel
 """
 
 from naoqi import ALProxy, ALBroker, ALModule
+from nao_config import *
 import time
 import sys
 import os
@@ -150,14 +151,17 @@ def detect_color(color_detection, myBroker, color_name):
 
 
 def main():
+
+    nao = InitNao()
+    """Hauptprogramm"""
     
-    
+    # Farbe hardcoded festlegen
     # Mögliche Werte: "rot", "gruen", "blau"
     COLOR_NAME = "gruen"
     nao = InitNao()
     detect_color_blob_proxy = nao.get_proxy("ALColorBlobDetection")
     # Farberkennung starten
-    result = detect_color(detect_color_blob_proxy, COLOR_NAME)
+    result = detect_color(nao.ip, nao.port, COLOR_NAME)
     
     if result and result.get("found"):
         print("\n=== ERFOLG ===")

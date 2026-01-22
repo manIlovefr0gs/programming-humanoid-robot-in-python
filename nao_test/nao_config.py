@@ -3,7 +3,7 @@ from naoqi import ALProxy
 
 class InitNao:
     
-    IP = "192.168.1.118"
+    IP = "192.168.1.102"
     PORT = 9559
     
     COLORS = {
