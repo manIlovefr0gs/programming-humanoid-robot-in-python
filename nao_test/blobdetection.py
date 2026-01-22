@@ -6,6 +6,7 @@ Python 2.7 kompatibel
 """
 
 from naoqi import ALProxy, ALBroker, ALModule
+from nao_config import *
 import time
 import sys
 
@@ -154,19 +155,16 @@ def detect_color(robot_ip, robot_port, color_name):
 
 
 def main():
+
+    nao = InitNao()
     """Hauptprogramm"""
-    
-    # Konfiguration
-    ROBOT_IP = "192.168.1.118"  # Lokale Simulation
-    # ROBOT_IP = "192.168.1.118"  # Echter Roboter
-    ROBOT_PORT = 9559
     
     # Farbe hardcoded festlegen
     # Mögliche Werte: "rot", "gruen", "blau"
     COLOR_NAME = "rot"
     
     # Farberkennung starten
-    result = detect_color(ROBOT_IP, ROBOT_PORT, COLOR_NAME)
+    result = detect_color(nao.ip, nao.port, COLOR_NAME)
     
     if result and result.get("found"):
         print("\n=== ERFOLG ===")
