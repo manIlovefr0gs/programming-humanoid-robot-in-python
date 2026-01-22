@@ -2,6 +2,9 @@
 import time
 from naoqi import ALProxy
 from change_posture import *
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from nao_config import *
 
 

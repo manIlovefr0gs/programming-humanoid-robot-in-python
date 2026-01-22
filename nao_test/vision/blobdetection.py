@@ -8,12 +8,13 @@ Python 2.7 kompatibel
 from naoqi import ALProxy, ALBroker, ALModule
 import time
 import sys
+import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from nao_config import *
 
-# Globale Variable für Callback
 ColorDetector = None
+
 
 class ColorBlobDetectorModule(ALModule):
     """Modul zum Empfangen der Color Blob Detection Events"""
@@ -23,6 +24,7 @@ class ColorBlobDetectorModule(ALModule):
         self.memory = ALProxy("ALMemory")
         self.detected = False
         self.blob_info = None
+
         
         # Event abonnieren
         self.memory.subscribeToEvent(
@@ -38,9 +40,12 @@ class ColorBlobDetectorModule(ALModule):
         self.blob_info = value
         print("Farb-Blob erkannt!")
         print("Event-Daten:", value)
+        
+    def get_last_detection(self):
+        """Gibt letzte Blob-Erkennung zurück"""
+        return self.blob_info
 
-
-def detect_color(color_detection, myBroker, color_name):
+def detect_color(robot_ip, robot_port, color_name):
     """
     Erkennt eine bestimmte Farbe über die Roboter-Kamera
     
@@ -67,13 +72,20 @@ def detect_color(color_detection, myBroker, color_name):
     color = colors[color_name.lower()]
     
     # Broker für Event-Callbacks erstellen
-
+    myBroker = ALBroker(
+        "myBroker",
+        "0.0.0.0",   # Listen auf allen Interfaces
+        0,           # Port automatisch wählen
+        robot_ip,
+        robot_port
+    )
     
-
+    global ColorDetector
     ColorDetector = ColorBlobDetectorModule("ColorDetector")
     
     try:
         # Proxies erstellen
+        color_detection = ALProxy("ALColorBlobDetection", robot_ip, robot_port)
         
         print("\n=== NAO Color Blob Detection ===")
         print("Suche nach Farbe: {}".format(color_name))
@@ -89,7 +101,7 @@ def detect_color(color_detection, myBroker, color_name):
         print("Farbe konfiguriert (Schwellenwert: {})".format(color["threshold"]))
         
         # Objekt-Eigenschaften setzen
-        min_size = 50      # Minimale Größe in Pixeln
+        min_size = 20      # Minimale Größe in Pixeln
         span = 0.05        # Größe des Objekts in Metern (5cm)
         color_detection.setObjectProperties(min_size, span)
         print("Objekt-Eigenschaften: min_size={} px, span={} m".format(min_size, span))
@@ -151,13 +163,17 @@ def detect_color(color_detection, myBroker, color_name):
 
 def main():
     
+    # Konfiguration
+    ROBOT_IP = "192.168.1.118"  # Lokale Simulation
+    # ROBOT_IP = "192.168.1.118"  # Echter Roboter
+    ROBOT_PORT = 9559
     
+    # Farbe hardcoded festlegen
     # Mögliche Werte: "rot", "gruen", "blau"
-    COLOR_NAME = "gruen"
-    nao = InitNao()
-    detect_color_blob_proxy = nao.get_proxy("ALColorBlobDetection")
+    COLOR_NAME = "rot"
+    
     # Farberkennung starten
-    result = detect_color(detect_color_blob_proxy, COLOR_NAME)
+    result = detect_color(ROBOT_IP, ROBOT_PORT, COLOR_NAME)
     
     if result and result.get("found"):
         print("\n=== ERFOLG ===")

@@ -2,6 +2,10 @@
 import numpy as np
 import cv2
 from naoqi import ALProxy
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 from nao_config import *
 
 # ALImage Struktur:
@@ -16,7 +20,7 @@ from nao_config import *
 
 def stream_camera(vision_proxy):
 
-    resolution = 0 # 0=QQVGA(160x120), 1=QVGA(320x240), 2=VGA(640x480)
+    resolution = 3 # 0=QQVGA(160x120), 1=QVGA(320x240), 2=VGA(640x480)
     color_space = 11 # RGB
     camera_index = 0 # 0=top camera, 1=bottom camera
 

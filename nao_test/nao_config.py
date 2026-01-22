@@ -24,9 +24,6 @@ class InitNao:
         return self._proxies[proxy]
 
 
-
-
-
 def main():
     # nur zum testen
     nao = InitNao()
