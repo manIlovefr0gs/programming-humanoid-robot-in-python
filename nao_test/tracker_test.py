@@ -30,7 +30,7 @@ def main(IP, PORT):
 
     # Set the robot relative position to target
     # The robot stays a 50 centimeters of target with 10 cm precision
-    tracker.setRelativePosition([-0.5, 0.0, 0.0, 0.1, 0.1, 0.3])
+    tracker.setRelativePosition([0.5, 0.0, 0.0, 0.1, 0.1, 0.3])
 
     # Then, start tracker.
     tracker.trackEvent(eventName)

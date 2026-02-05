@@ -1,53 +1,44 @@
-"""
-=============================================================================
- MODULE: Speech Recognition Client Bridge
- COMPATIBILITY: Python 2.7 (Main App) <--> Python 3 (Speech Server)
-=============================================================================
- INSTRUCTIONS:
- 1. Place this file in your Python 2.7 project directory.
- 2. This file is a 'Remote Control' for vosk_server.py.
- 3. Ensure vosk_server.py is running in Python 3 before use.
-=============================================================================
-"""
 import socket
+import time
 
 class SpeechRecognizerClient:
     def __init__(self, host='127.0.0.1', port=65432):
         self.host = host
         self.port = port
-        self.sock = None
 
-    def connect(self):
+    def get_one_command(self):
+        """
+        Connects, records for 5 seconds, gets result, and closes connection.
+        Returns: String (lowercase)
+        """
+        sock = None
         try:
-            self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.sock.connect((self.host, self.port))
-            return True
+            # 1. Connect
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(10.0) # Safety timeout
+            sock.connect((self.host, self.port))
+            
+            # 2. Send Start
+            sock.sendall("START".encode('utf-8'))
+            
+            # 3. Wait for ACK (Ready to record)
+            ack = sock.recv(1024)
+            if not ack:
+                return "error_no_ack"
+            
+            # 4. Wait for Result (Server records for ~5 sec)
+            # We wait a bit longer than the recording time
+            sock.settimeout(15.0) 
+            response = sock.recv(4096)
+            
+            if response:
+                return response.decode('utf-8').lower()
+            else:
+                return "empty"
+                
         except Exception as e:
-            print("Connection failed: " + str(e))
-            return False
-
-    def start_listening(self):
-        """Sends START command."""
-        if self.sock:
-            try:
-                self.sock.sendall("START".encode('utf-8'))
-                # Wait for ACK to ensure server is recording
-                self.sock.recv(1024)
-            except Exception as e:
-                print("Error starting: " + str(e))
-
-    def stop_listening(self):
-        """Sends STOP command and waits for text."""
-        if self.sock:
-            try:
-                self.sock.sendall("STOP".encode('utf-8'))
-                # Block until we get the full text back
-                response = self.sock.recv(4096)
-                return response.decode('utf-8')
-            except Exception as e:
-                return "Error: " + str(e)
-        return ""
-
-    def close(self):
-        if self.sock:
-            self.sock.close()
+            print ("Speech Client Error: " + str(e))
+            return "error"
+        finally:
+            if sock:
+                sock.close()
