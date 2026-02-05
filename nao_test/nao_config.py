@@ -10,7 +10,7 @@ class InitNao:
     """NAO Roboter Konfiguration und Proxy-Manager"""
     
     # IP-Adresse und Port des Roboters
-    IP = "192.168.1.118"
+    IP = "192.168.1.183"
     PORT = 9559
     
     # Farbdefinitionen für Blob Detection

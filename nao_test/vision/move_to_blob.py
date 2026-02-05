@@ -7,6 +7,7 @@ import sys
 import os
 import time
 import random
+import numpy as np
 
 # --- Setup Paths ---
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -77,7 +78,7 @@ class BlobTracker(ALModule):
 
 
 def configure_vision(blob_proxy, color_name):
-    """Sets up the camera for the specific color"""
+    """Sets up the camera for the specific color - using proven settings"""
     config = InitNao()
     
     # German/English mapping
@@ -97,9 +98,16 @@ def configure_vision(blob_proxy, color_name):
         print("Color set: RGB({}, {}, {}) Threshold: {}".format(
             c["r"], c["g"], c["b"], c["threshold"]))
         
-        # Set object size (min 20px, approx 5cm diameter)
-        blob_proxy.setObjectProperties(20, 0.05)
-        print("Object properties set: min_size=20px, span=0.05m")
+        # Set object size - WICHTIG: Genau wie in blobdetection.py
+        # min_size in Pixeln, span in Metern
+        min_size = 20      # Minimale Größe in Pixeln (für 5-10cm Objekte)
+        span = 0.05        # Geschätzte Objektgröße in Metern (5cm)
+        blob_proxy.setObjectProperties(min_size, span)
+        print("Object properties set: min_size={}px, span={}m".format(min_size, span))
+        
+        # Optional: Auto-Exposure für stabilere Farberkennung
+        # Auskommentiert lassen, da es manchmal Probleme macht
+        # blob_proxy.setAutoExposure(False)
     else:
         print("ERROR: Color not found in config!")
     
@@ -141,17 +149,70 @@ def perform_wipe_move(motion):
 
 def scan_head(motion):
     """
-    Manually moves head to find the object.
+    Manually moves head to find the object - SLOW for better image quality.
     Returns immediately (non-blocking) so we can check for blobs while moving.
     """
-    # Scan path: Center -> Left -> Right -> Center
+    # VIEL LANGSAMERE Scan-Bewegung für stabile Bilder
+    # Scan path: Center -> Left (langsam) -> Right (langsam) -> Center
     names = ["HeadYaw", "HeadPitch"]
-    keys  = [[0.0, 0.8, -0.8, 0.0], [0.0, -0.2, -0.2, 0.0]] 
-    times = [[1.0, 3.0, 6.0, 9.0], [1.0, 3.0, 6.0, 9.0]]
+    # Yaw: 0° -> 45° links -> 45° rechts -> 0°
+    # Pitch: leicht nach unten für besseren Blickwinkel
+    keys  = [[0.0, 0.8, -0.8, 0.0], [0.0, -0.3, -0.3, -0.3, 0.0]] 
+    # LANGSAME Zeiten: 15 Sekunden für kompletten Scan (statt 9 Sekunden)
+    times = [[2.0, 7.0, 12.0, 15.0], [2.0, 7.0, 12.0, 15.0]]
     
     # 'post' makes it non-blocking
     motion.post.angleInterpolation(names, keys, times, True)
-    print("Head scan started (non-blocking)")
+    print("Head scan started (SLOW mode for stable images)")
+
+
+def take_search_picture(video_proxy, picture_number):
+    """
+    Macht ein Bild während der Suche
+    """
+    try:
+        from PIL import Image
+        
+        # Subscribe to camera
+        name = video_proxy.subscribeCamera(
+            "search_capture_" + str(picture_number),
+            0,      # Top camera
+            2,      # VGA 640x480 (bessere Qualität)
+            11,     # RGB
+            10      # 10 FPS
+        )
+        
+        # Kurz warten damit Kamera stabilisiert
+        time.sleep(0.3)
+        
+        # Bild holen
+        img = video_proxy.getImageRemote(name)
+        
+        if img:
+            width = img[0]
+            height = img[1]
+            data = img[6]
+            
+            image = np.frombuffer(data, dtype=np.uint8)
+            image = image.reshape((height, width, 3))
+            
+            # Bild speichern
+            filename = "search_scan_{}.png".format(picture_number)
+            Image.fromarray(image).save(filename)
+            print("  -> Picture saved: " + filename)
+            
+            video_proxy.unsubscribe(name)
+            return True
+        else:
+            video_proxy.unsubscribe(name)
+            return False
+    except Exception as e:
+        print("  -> Could not take picture: " + str(e))
+        try:
+            video_proxy.unsubscribe(name)
+        except:
+            pass
+        return False
 
 
 def get_color_from_voice(nao, tts):
@@ -239,6 +300,7 @@ def main():
         blob_proxy = nao.get_proxy("ALColorBlobDetection")
         tts = nao.get_proxy("ALTextToSpeech")
         posture = nao.get_proxy("ALRobotPosture")
+        video_proxy = nao.get_proxy("ALVideoDevice")
     except Exception as e:
         print("ERROR: Could not connect to robot!")
         print(str(e))
@@ -254,7 +316,7 @@ def main():
     motion.wakeUp()
     posture.goToPosture("StandInit", 0.8)
     print("Standing up complete!")
-    time.sleep(1)
+    time.sleep(2)  # 2 Sekunden warten für stabile Kamera
 
     # --- 2. Get Target Color ---
     print("\n[STEP 2/5] Getting target color...")
@@ -313,6 +375,8 @@ def main():
         state = "SEARCH"
         start_time = time.time()
         last_status_print = 0
+        picture_counter = 0  # Zähler für Bilder
+        last_picture_time = 0  # Zeitpunkt des letzten Bildes
         
         while (time.time() - start_time) < 90:  # 90 seconds max
             
@@ -341,6 +405,14 @@ def main():
                     if not motion.moveIsActive():
                         print("Scanning head...")
                         scan_head(motion)
+                    
+                    # Mache alle 3 Sekunden ein Bild während der Suche
+                    if (time.time() - last_picture_time) > 3.0 and picture_counter < 5:
+                        print("Taking search picture {}...".format(picture_counter + 1))
+                        if take_search_picture(video_proxy, picture_counter):
+                            picture_counter += 1
+                        last_picture_time = time.time()
+                    
                     time.sleep(0.5)
                     
             elif state == "TRACK":
@@ -407,6 +479,24 @@ def main():
         print("Cleaning up...")
         print("="*60)
         
+        # 1. WICHTIG: Stoppe alle Bewegungen (auch Kopf!)
+        try:
+            print("Stopping all movements...")
+            motion.stopMove()  # Stoppt Körper-Bewegung
+            motion.killMove()  # Stoppt ALLE laufenden Bewegungen inkl. Kopf
+            time.sleep(0.5)
+        except:
+            pass
+        
+        # 2. Kopf in neutrale Position
+        try:
+            print("Centering head...")
+            motion.setStiffnesses("Head", 1.0)
+            motion.angleInterpolation(["HeadYaw", "HeadPitch"], [0.0, 0.0], [1.0, 1.0], True)
+        except:
+            pass
+        
+        # 3. Tracker cleanup
         if tracker:
             try:
                 tracker.stopTracker()
@@ -415,18 +505,25 @@ def main():
             except:
                 pass
         
+        # 4. Blob module cleanup
         if BlobTrackerModule:
             BlobTrackerModule.shutdown()
             print("BlobTracker module unsubscribed")
         
+        # 5. Broker cleanup
         if my_broker:
             my_broker.shutdown()
             print("Broker shut down")
         
-        # Sit down and rest
+        # 6. Sit down and rest
         print("Sitting down...")
-        posture.goToPosture("Sit", 0.8)
-        motion.rest()
+        try:
+            posture.goToPosture("Sit", 0.8)
+            time.sleep(0.5)
+            motion.rest()
+            print("Robot resting")
+        except:
+            print("Could not sit down properly")
         
         print("\n" + "="*60)
         print(" MISSION COMPLETE")
