@@ -98,6 +98,8 @@ def _english_color_name(color_name):
         "red": "red",
         "gruen": "green",
         "green": "green",
+        "gelb": "yellow",
+        "yellow": "yellow",
         "blau": "blue",
         "blue": "blue",
     }
@@ -117,7 +119,7 @@ def _announce(message, tts_proxy):
 
 
 def run_head_tracker(nao, frame_callback=None, show_preview=False, save_local=True):
-    """Search a color blob, approach until max down pitch, then push forward and stop."""
+    """Search a color blob, approach until it touches image bottom, then push forward and stop."""
     motion = None
     posture = None
     tts = None
@@ -266,23 +268,33 @@ def run_head_tracker(nao, frame_callback=None, show_preview=False, save_local=Tr
                     move_is_stopped = False
                     last_move_control_ts = now
 
-                current_yaw, current_pitch = _safe_head_angles(motion)
-                dyn_pitch_limits = _interp_yaw_pitch_limits(current_yaw, pitch_limits)
-                pitch_is_max_down = current_pitch >= (dyn_pitch_limits[1] - config.DESTROY_PITCH_MARGIN_RAD)
-                yaw_is_forward = abs(current_yaw) <= config.DESTROY_YAW_TOLERANCE_RAD
+                x, y, w, h = detection["bbox"]
+                blob_bottom = y + h
+                image_bottom = int(height)
+                bottom_margin = int(max(0, getattr(config, "DESTROY_BOTTOM_MARGIN_PX", 0)))
+                bottom_touched = blob_bottom >= (image_bottom - bottom_margin)
 
-                if pitch_is_max_down and yaw_is_forward:
+                if bottom_touched:
                     if config.LOCOMOTION_ENABLED and not move_is_stopped:
                         _stop_move(motion)
                         move_is_stopped = True
 
                     if config.LOCOMOTION_ENABLED and config.DESTROY_EXTRA_FORWARD_M > 0.0:
                         try:
-                            motion.moveTo(float(config.DESTROY_EXTRA_FORWARD_M), 0.0, 0.0)
+                            motion.moveTo(
+                                float(config.DESTROY_EXTRA_FORWARD_M),
+                                float(getattr(config, "DESTROY_EXTRA_LATERAL_M", 0.0)),
+                                0.0,
+                            )
                         except Exception:
                             pass
 
                     _announce("Target eleminated.", tts)
+                    if posture is not None:
+                        try:
+                            posture.goToPosture("Sit", config.LOCOMOTION_POSTURE_SPEED)
+                        except Exception:
+                            pass
                     break
 
             else:

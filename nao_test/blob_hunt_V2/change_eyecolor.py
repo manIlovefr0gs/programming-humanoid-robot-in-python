@@ -12,6 +12,8 @@ COLORS = {
     "rot":    0x00FF0000,
     "green":  0x0000FF00,
     "gruen":  0x0000FF00,
+    "yellow": 0x00FFFF00,
+    "gelb":   0x00FFFF00,
     "blue":   0x000000FF,
     "blau":   0x000000FF,
     "white":  0x00FFFFFF,

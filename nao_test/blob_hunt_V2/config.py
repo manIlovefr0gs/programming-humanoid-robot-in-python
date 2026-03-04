@@ -20,7 +20,7 @@ SCAN_HOLD_S = 0.6  # Increase if head misses targets while scanning quickly.
 
 
 # Blob tracking
-TRACK_COLOR = "rot"  # "rot"/"gruen"/"blau" or "red"/"green"/"blue"
+TRACK_COLOR = "rot"  # "rot"/"gruen"/"gelb" or "red"/"green"/"yellow"
 TRACK_MIN_AREA = 200  # Increase if false blobs from noise are detected.
 TRACK_MAX_AREA = None
 TRACK_DEADBAND = 0.05  # Increase if head jitters around a centered object.
@@ -48,16 +48,16 @@ HEAD_YAW_PITCH_LIMITS = [
 
 
 # Destroy behavior
-DESTROY_PITCH_MARGIN_RAD = 0.03  # Increase if max-down trigger is reached too late.
-DESTROY_YAW_TOLERANCE_RAD = 0.20  # Increase if trigger is too strict while still centered.
-DESTROY_EXTRA_FORWARD_M = 0.50  # Extra push distance after max-down pitch is reached.
+DESTROY_BOTTOM_MARGIN_PX = 3  # Increase if trigger should fire a bit before exact bottom contact.
+DESTROY_EXTRA_FORWARD_M = 0.40  # Extra push distance after bottom-edge contact.
+DESTROY_EXTRA_LATERAL_M = 0.03  # Positive = left. Use to counter right drift in final push.
 
 
 # Locomotion
 LOCOMOTION_ENABLED = True
 LOCOMOTION_INIT_POSTURE = "StandInit"
 LOCOMOTION_POSTURE_SPEED = 0.5
-APPROACH_FORWARD_X = 0.20  # Increase for faster approach; reduce for safer behavior.
+APPROACH_FORWARD_X = 0.24  # Increase for faster approach; reduce for safer behavior.
 APPROACH_THETA_K = 0.45  # Increase if robot does not turn enough toward the target.
 APPROACH_MAX_THETA = 0.18
 MOVE_FREQUENCY = 0.50
@@ -86,6 +86,8 @@ HSV_COLOR_PRESETS = {
             ((170, 120, 70), (180, 255, 255))],
     "green": [((36, 80, 70), (85, 255, 255))],
     "gruen": [((36, 80, 70), (85, 255, 255))],
+    "yellow": [((20, 80, 80), (35, 255, 255))],
+    "gelb": [((20, 80, 80), (35, 255, 255))],
     "blue": [((90, 80, 70), (130, 255, 255))],
     "blau": [((90, 80, 70), (130, 255, 255))],
 }

@@ -5,9 +5,9 @@
 Der Roboter soll ein Boden-Objekt "umrennen":
 1. Objekt suchen (`search`)
 2. Objekt mit Kopf in Yaw + Pitch zentrieren und gleichzeitig vorwaerts laufen (`approach`)
-3. Wenn Pitch am dynamischen Max-Down-Limit ist und Yaw nahe 0 ist:
+3. Wenn der Blob den unteren Sichtfeldrand beruehrt:
    - Objekt ist direkt vor dem Roboter
-4. Dann noch `DESTROY_EXTRA_FORWARD_M` weiterlaufen (default `0.50 m`) und stoppen
+4. Dann noch `DESTROY_EXTRA_FORWARD_M` weiterlaufen (default `0.20 m`) und stoppen
 
 ## 2) Statusmeldungen (Englisch)
 
@@ -49,11 +49,10 @@ Hinweis:
   - Drehkorrektur: aus aktuellem HeadYaw (`APPROACH_THETA_K`, `APPROACH_MAX_THETA`)
 
 ### Destroy trigger
-- Trigger, wenn beide Bedingungen wahr sind:
-  - `current_pitch >= pitch_max - DESTROY_PITCH_MARGIN_RAD`
-  - `abs(current_yaw) <= DESTROY_YAW_TOLERANCE_RAD`
+- Trigger, wenn die Unterkante der Blob-Bounding-Box den unteren Bildrand erreicht:
+  - `blob_bottom >= image_bottom - DESTROY_BOTTOM_MARGIN_PX`
 - Danach:
-  - `moveTo(DESTROY_EXTRA_FORWARD_M, 0, 0)`
+  - `moveTo(DESTROY_EXTRA_FORWARD_M, DESTROY_EXTRA_LATERAL_M, 0)`
   - Stopp
 
 ## 5) Wichtige Dateien
