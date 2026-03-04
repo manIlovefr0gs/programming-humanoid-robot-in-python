@@ -15,6 +15,11 @@ Es gibt zwei Betriebsarten:
    - Server: `voice_recog/vosk_server.py` (Python 3)
    - Robot-App: `nao_test/blob_hunt_V2/voice_color_hunt.py` (Python 2)
 
+Warum dieses Zielverhalten:
+1. Ein farbbasierter Boden-Task ist fuer NAO robust und schnell umsetzbar, weil keine komplexe Objektklassifikation noetig ist.
+2. Das "umrennen" mit Bottom-Trigger ist bewusst einfach gehalten, damit das Verhalten im Feld gut reproduzierbar bleibt.
+3. Die optionale Sprachwahl entkoppelt Bedienung und Robotiklogik: Farbe kann flexibel gewechselt werden, ohne den Tracker-Code zu aendern.
+
 ## 2. Gesamtarchitektur
 
 ### 2.1 Komponenten
@@ -32,6 +37,11 @@ Es gibt zwei Betriebsarten:
 6. Speech-Client (`voice_recog/speech_client.py`, Python 2/3-kompatibel)
    - Einfache Socket-Kommandos `START`/`STOP`.
 
+Warum diese Aufteilung:
+1. Bewegung, Vision und Sprache haben unterschiedliche Laufzeit- und Abhaengigkeitsprofile.
+2. Die Trennung reduziert Ausfallkaskaden: faellt Sprache aus, bleibt Direktbetrieb moeglich.
+3. `config.py` als zentrale Schicht macht Tuning schneller und verhindert harte Codeeingriffe im Regelkreis.
+
 ### 2.2 Datenfluss
 
 1. Kamera-Frames kommen von `ALVideoDevice`.
@@ -40,12 +50,22 @@ Es gibt zwei Betriebsarten:
 4. Bei unterem Bildrandkontakt wird Finalschub `moveTo(...)` ausgefuehrt und gestoppt.
 5. Optional: `voice_color_hunt.py` setzt vorher `config.TRACK_COLOR` aus Sprachtext.
 
+Warum dieser Datenfluss:
+1. Der Tracker arbeitet framebasiert und braucht pro Zyklus nur ein kompaktes Blob-Signal statt Rohdatenhistorie.
+2. Dadurch bleiben Rechenlast und Latenz niedrig, was fuer Kopf- und Gehregelung entscheidend ist.
+3. Die Sprachkomponente beeinflusst nur den Parameter `TRACK_COLOR`, nicht die Bewegungslogik selbst.
+
 ## 3. Voraussetzungen und Laufzeitkontext
 
 ### 3.1 Python-Versionen
 
 1. `blob_hunt_V2`: auf Python 2.7/NAOqi ausgelegt.
 2. `vosk_server.py`: Python 3.
+
+Warum gemischte Python-Versionen:
+1. Viele NAOqi-Setups sind in bestehenden Umgebungen weiterhin Python-2-zentriert.
+2. Moderne Speech-Stacks (`vosk`, `pyaudio` in aktueller Pflege) sind in Python 3 deutlich stabiler verfuegbar.
+3. Die Socket-Bruecke minimiert Migrationsrisiko, weil beide Seiten unabhaengig aktualisiert werden koennen.
 
 ### 3.2 Externe Abhaengigkeiten
 
@@ -67,6 +87,11 @@ Auf Sprachserver-Seite:
 2. Sprachclient verbindet lokal per TCP:
    - Host: `127.0.0.1`
    - Port: `65432`
+
+Warum TCP lokal:
+1. TCP ist sprachunabhaengig und einfach in Python 2 und 3 nutzbar.
+2. `127.0.0.1` verhindert unnoetige externe Angriffsflaeche und reduziert Netzvariablen.
+3. Ein klares Textprotokoll (`START`/`STOP`) vereinfacht Debugging im Betrieb.
 
 ## 4. Datei-fuer-Datei-Erklaerung
 
@@ -104,6 +129,11 @@ Wichtige interne Hilfsfunktionen:
 7. `_announce(...)`:
    - Gibt Status auf Konsole aus und optional per `ALTextToSpeech`.
 
+Warum diese Hilfsfunktionen:
+1. Sie trennen Hardware-nahe Zugriffe von der Verhaltenslogik und machen Fehlerbehandlung zentral.
+2. Gleiche Sicherheitsmuster (Clamp, Fallbacks, Try/Except) muessen nur einmal gepflegt werden.
+3. Bei Robotikcode reduziert das Seiteneffekte und erleichtert reproduzierbares Tuning.
+
 Hauptfunktion `run_head_tracker(nao, frame_callback=None, show_preview=False, save_local=True)`:
 
 Initialisierung:
@@ -114,6 +144,11 @@ Initialisierung:
 5. Optional:
    - Previewfenster (wenn `show_preview=True` und OpenCV verfuegbar)
    - Lokale AVI-Aufzeichnung unter `nao_test/blob_hunt_V2/recordings/`.
+
+Warum diese Reihenfolge:
+1. Erst Motor- und Posture-Bereitschaft, dann Sensorik: so werden Bewegungsbefehle nicht an einen "schlafenden" Roboter gesendet.
+2. Video wird erst nach erfolgreicher Robotverbindung aktiviert, um unnoetige Subscriptions bei Fehlern zu vermeiden.
+3. Preview/Recording sind optional, damit Echtzeitverhalten auch ohne GUI/Datei-I/O stabil bleibt.
 
 Laufende Zustandslogik:
 1. Startzustand: `mode = "search"`.
@@ -154,12 +189,26 @@ Laufende Zustandslogik:
      - Scanpositionen nacheinander abfahren (`SCAN_HOLD_S` Pause),
      - an den Enden Richtung umkehren (Ping-Pong-Scan).
 
+Warum diese Zustandslogik:
+1. `search` als Start ist robust, weil vor der ersten Sichtung keine Zielrichtung bekannt ist.
+2. Die Trennung `search`/`approach` verhindert, dass der Roboter blind vorwaerts laeuft.
+3. Normierte Fehler machen das Verhalten auf verschiedenen Aufloesungen vergleichbar.
+4. Deadband und Intervallsteuerung reduzieren Aktorjitter und schonen Kopfmotoren.
+5. Theta aus HeadYaw ist eine einfache, stabile Kopplung zwischen Blickrichtung und Fahrtrichtung.
+6. Bei Sichtverlust wird sofort gestoppt, weil alte Zielinfos schnell veralten koennen.
+7. Ping-Pong-Scan vermeidet harte Rueckspruenge und deckt den Suchraum gleichmaessig ab.
+
 Cleanup (`finally`):
 1. Stoppt Bewegung.
 2. Schreibt Video-Datei sauber zu Ende.
 3. Unsubscribed Kamera.
 4. Schliesst Preview-Fenster.
 5. Setzt Kopfstiffness auf 0.
+
+Warum dieses Cleanup:
+1. Robotikprozesse muessen "fail-safe" enden, auch bei Exceptions.
+2. Offene Kamerasubscriptions und aktive Stiffness fuehren sonst zu Ressourcen- und Sicherheitsproblemen.
+3. Konsistentes Herunterfahren verbessert die Zuverlaessigkeit beim naechsten Start.
 
 ### 4.3 `nao_test/blob_hunt_V2/vision.py`
 
@@ -188,6 +237,12 @@ Funktionen:
    - berechnet Schwerpunkt und Bounding-Box,
    - Rueckgabe-Dictionary mit Geometriedaten.
 
+Warum diese Vision-Pipeline:
+1. HSV ist fuer Farbsegmentierung robuster gegen Beleuchtung als naive RGB-Schwellen.
+2. Morphologische Filter entfernen "Salt-and-Pepper"-Artefakte, bevor Konturen bewertet werden.
+3. Groesste gueltige Kontur priorisiert das wahrscheinlich relevante Ziel im Vordergrund.
+4. Schwerpunkt + Bounding-Box liefern genau die Signale, die Regelung und Destroy-Trigger benoetigen.
+
 ### 4.4 `nao_test/blob_hunt_V2/head_control.py`
 
 Rolle:
@@ -203,6 +258,11 @@ Funktionen:
 
 Rolle:
 1. Zentrale Parametrisierung ohne Codeaenderung in der Logik.
+
+Warum zentral in `config.py`:
+1. Feldtuning kann ohne Eingriff in Kernfunktionen erfolgen.
+2. Regressionen sinken, weil Logik und Parameter nicht vermischt werden.
+3. Teamarbeit wird leichter, da Parameteraenderungen klar nachvollziehbar sind.
 
 Parametergruppen:
 1. Search Pattern:
@@ -251,6 +311,11 @@ Details:
    - setzt `config.TRACK_COLOR`,
    - setzt Augenfarbe via `ALLeds` (`set_color`),
    - startet `run_head_tracker(nao)`.
+
+Warum dieser Ablauf:
+1. Enter-gesteuertes Start/Stop ist in lauter Umgebung verlaesslicher als automatische Sprachenddetektion.
+2. LED-Farbfeedback bestaetigt sofort, welche Zielfarbe aktiv ist.
+3. Erst nach validierter Farbe wird Tracking gestartet, um Fehlfahrten zu vermeiden.
 
 ### 4.7 `nao_test/blob_hunt_V2/change_eyecolor.py`
 
@@ -310,12 +375,21 @@ Klasse `VoskServer`:
    - fuehrt `Reset()` aus,
    - gibt erkannten Text zurueck.
 
+Warum Thread + `join()`:
+1. Audioaufnahme blockiert; der Hintergrundthread haelt den Socket-Loop reaktionsfaehig.
+2. `join()` verhindert Race-Conditions zwischen letztem Audiopaket und `FinalResult()`.
+3. `Reset()` sorgt dafuer, dass Folgesitzungen keine Alt-Hypothesen mitschleppen.
+
 Socket-Server `run_server()`:
 1. TCP-Server mit `SO_REUSEADDR`, `listen(1)`.
 2. Pro Client werden Textbefehle verarbeitet:
    - `START` -> Aufnahme starten, Antwort `ACK_START`
    - `STOP` -> Aufnahme stoppen, erkannter Text zurueck
 3. Nach Disconnect wartet Server auf naechsten Client.
+
+Warum das Protokoll minimal ist:
+1. Die App braucht nur zwei klar definierte Phasen: Aufnahme an/aus.
+2. Weniger Kommandos bedeuten weniger Fehlerzustande und schnellere Diagnose.
 
 Wichtiger Hinweis:
 1. Der Code nutzt ein globales `rec` und einen Engine-Instanzzustand.
@@ -350,6 +424,11 @@ Protokoll:
 7. `RECOVERY`:
    - wenn Blob weg und Timeout ueberschritten: `APPROACH -> SEARCH`.
 
+Warum diese Zustandsaufteilung:
+1. Klare Zustaende machen Laufzeitverhalten vorhersagbar und debugbar.
+2. `RECOVERY` trennt kurzzeitige Messaussetzer von echtem Zielverlust.
+3. `DESTROY_TRIGGER` als eigener Schritt vermeidet Mehrdeutigkeit zwischen "noch folgen" und "jetzt final schieben".
+
 ## 6. Regler- und Geometrieprinzipien
 
 1. Bildkoordinaten:
@@ -365,6 +444,12 @@ Protokoll:
    - theta proportional zu aktuellem Kopf-Yaw (indirekte Zielrichtung).
 5. Bottom-Trigger:
    - Heuristik: Wenn Blob unten im Bild anliegt, ist Ziel sehr nah.
+
+Warum diese Reglerprinzipien:
+1. Normierung + Proportionalregelung liefern mit wenig Rechenaufwand ausreichend stabiles Verhalten.
+2. Deadband ist bei NAO wichtig, weil kleine Winkelkommandos sonst sichtbares Zittern erzeugen.
+3. Schrittbegrenzung schuetzt Mechanik und verhindert Uebersteuern bei verrauschten Detektionen.
+4. Bottom-Trigger ersetzt aufwendigere Distanzsensorfusion durch eine robuste visuelle Naehe-Heuristik.
 
 ## 7. Konfigurationsleitfaden (praxisnah)
 
@@ -389,6 +474,12 @@ Protokoll:
    - HSV-Bereich enger setzen,
    - `MASK_KERNEL_SIZE` erhoehen.
 
+Warum diese Tuning-Hebel wirken:
+1. `TRACK_MIN_AREA` filtert kleine Stoerflaechen, die oft von Reflexen kommen.
+2. Engere HSV-Grenzen reduzieren Verwechslung mit Hintergrundfarben.
+3. Ein groesserer Kernel unterdrueckt Einzelpixelrauschen, kann aber sehr kleine echte Ziele verschlucken.
+4. `TRACK_LOST_TIMEOUT_S` bestimmt direkt den Trade-off zwischen Reaktivitaet und Robustheit gegen kurze Verdeckungen.
+
 ## 8. Sprachmodus End-to-End
 
 Startreihenfolge:
@@ -403,6 +494,14 @@ Interaktion:
 2. Nutzer spricht Farbe.
 3. Enter -> Server stoppt und sendet Text.
 4. Farbe wird extrahiert, Augenfarbe gesetzt, Blob-Hunt startet.
+
+Warum zwei Terminals:
+1. Speech-Server und Robot-App haben unterschiedliche Python-Runtimes und sollen unabhaengig neu gestartet werden koennen.
+2. Getrennte Konsolen machen Fehlerdiagnose einfacher (Audiofehler vs. Robotikfehler).
+
+Warum manuell mit Enter:
+1. Der Nutzer definiert aktiv das Aufnahmefenster und vermeidet ungewollte Daueraufnahme.
+2. In Werkstattumgebung ist das oft robuster als sprachbasierte End-of-Utterance-Erkennung.
 
 Unterstuetzte Farbwoerter:
 1. red, green, yellow
@@ -426,6 +525,10 @@ Video-Artefakte:
 2. Im Overlay:
    - Bildzentrum, Blob-Box, Modus.
 
+Warum diese Artefakte wichtig sind:
+1. Sie liefern nachtraeglich objektive Evidenz fuer Fehlersuche und Parametervergleich.
+2. Overlay-Daten zeigen direkt, ob Fehler aus Vision, Regelung oder Bewegung stammen.
+
 ## 10. Fehlerbilder und Ursachen
 
 1. Keine Blob-Erkennung:
@@ -433,7 +536,7 @@ Video-Artefakte:
    - falscher HSV-Bereich,
    - Objektflaeche unter `TRACK_MIN_AREA`,
    - falsche Kamera/Belichtung.
-2. Robot bewegt sich nicht:
+2. Roboter bewegt sich nicht:
    - `LOCOMOTION_ENABLED=False`,
    - `moveInit`/Posture fehlgeschlagen,
    - Stiffness/WakeUp nicht aktiv.
@@ -444,6 +547,11 @@ Video-Artefakte:
 4. Server startet nicht:
    - Modellpfad `voice_recog/model` fehlt,
    - `pyaudio`/`vosk` nicht installiert.
+
+Warum genau diese Fehler haeufig sind:
+1. Das System ist stark von externen Laufzeitbibliotheken und Audio-Hardwarezugriff abhaengig.
+2. Farbtracking reagiert empfindlich auf Licht und Kamerasetup, deshalb dominieren HSV-/Belichtungsprobleme.
+3. Beim Sprachmodus sind Portbelegung und lokale Umgebungskonfiguration die typischen Erstfehler.
 
 ## 11. Sicherheits- und Robustheitsaspekte
 
@@ -457,6 +565,11 @@ Video-Artefakte:
    - Endstoss `moveTo` ist offen-loop.
    - Auf freies Umfeld achten und ausreichenden Sicherheitsabstand halten.
 
+Warum diese Sicherheitsstrategie:
+1. "Stop on uncertainty" (Sichtverlust => stopMove) reduziert Kollisionsrisiko bei unsicherer Wahrnehmung.
+2. Cleanup im `finally` ist Pflicht, weil Robotikcode auch bei Exceptions einen sicheren Endzustand braucht.
+3. Offene Schleifen im Endstoss sind bewusst kurz gehalten, um Risiko gegen Zielerreichung abzuwiegen.
+
 ## 12. Bekannte Grenzen des aktuellen Designs
 
 1. Nur 2D-Farbheuristik, keine Tiefenschaetzung.
@@ -464,6 +577,11 @@ Video-Artefakte:
 3. Keine Mehrziel-Strategie, immer groesster Blob.
 4. Sprachserver ist nicht fuer parallele Clients ausgelegt.
 5. Typische Schreibfehler bleiben unveraendert im Statustext (`eleminated`).
+
+Warum diese Grenzen akzeptiert wurden:
+1. Fokus lag auf robustem Feldverhalten mit geringem Integrationsaufwand.
+2. Tiefenschaetzung und Multi-Target-Logik wuerden Komplexitaet und Tuningbedarf deutlich erhoehen.
+3. Einfache, deterministische Heuristiken sind fuer Lehr-/Testumgebungen oft wartbarer als komplexe Modelle.
 
 ## 13. Typische Fragen und kurze Antworten (FAQ-Basis)
 
@@ -481,6 +599,12 @@ Video-Artefakte:
    - HSV-Preset in `config.HSV_COLOR_PRESETS` ergaenzen und Alias im Sprachparser ergaenzen.
 7. Wo aendere ich die NAO-IP?
    - In `nao_test/nao_config.py` (`InitNao.IP`).
+8. Warum stoppt der Roboter, obwohl das Objekt noch im Bild ist?
+   - Meist hat `detect_blob` kurzfristig keine gueltige Kontur geliefert (Flaeche, HSV oder Bewegungsblur), daher greift Sicherheitsstopp.
+9. Warum wird mit Kopfbewegung gelenkt statt direkt aus Blob-X?
+   - HeadYaw ist bereits gefiltert und limitgeprueft; daraus entsteht eine stabilere Lenkgroesse.
+10. Warum sitzt der Roboter am Ende (optional)?
+   - Das reduziert Restbewegung nach Missionsende und erleichtert sicheren Neustart.
 
 ## 14. Schnellstart (kompakt)
 
@@ -493,4 +617,3 @@ Mit Sprache:
 
 Test nur Gehen:
 1. `python2 nao_test/blob_hunt_V2/walk_forward_test.py`
-
